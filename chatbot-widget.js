@@ -6,7 +6,7 @@
   const VERCEL_URL = "https://klema-earrings.vercel.app";
 
   // Povolene domény
-  const allowed = ["klemaearrings.sk", "localhost", "127.0.0.1"];
+  const allowed = ["klemaearrings.sk", "localhost", "127.0.0.1", "ragnetiq.com"];
   if (!allowed.includes(window.location.hostname)) {
     console.warn("Tento widget nie je povolený na tejto doméne");
     return; // NEvytvára iframe
