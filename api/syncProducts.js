@@ -2,7 +2,7 @@
 // Endpoint pre synchronizáciu produktov zo Shopify
 // Používa Upstash Redis ako perzistentnú cache
 
-const CACHE_KEY = 'shopify_products';
+const CACHE_KEY = 'klema_shopify_products';
 const CACHE_TTL_SECONDS = 24 * 60 * 60; // 24 hodín
 
 export default async function handler(req, res) {
@@ -17,9 +17,9 @@ export default async function handler(req, res) {
 
   const SHOPIFY_STORE_URL = process.env.SHOPIFY_STORE_URL;
   const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
-  // Upstash/KV - podporuje obe pomenovania
-  const UPSTASH_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const UPSTASH_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  // Upstash/KV - klema_shopify_ prefix pre Klema Earrings projekt
+  const UPSTASH_URL = process.env.klema_shopify_KV_REST_API_URL || process.env.KV_REST_API_URL;
+  const UPSTASH_TOKEN = process.env.klema_shopify_KV_REST_API_TOKEN || process.env.KV_REST_API_TOKEN;
 
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
