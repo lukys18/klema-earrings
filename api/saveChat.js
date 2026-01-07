@@ -21,6 +21,29 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
+
+/**
+ * Hash IP address to create anonymous user_id
+ */
+function getUserIdFromIp(ip) {
+  if (!ip) return null;
+  // Vytvoríme SHA-256 hash z IP + salt pre anonymitu
+  const salt = 'ragnetiq-chatbot-2024';
+  return crypto.createHash('sha256').update(ip + salt).digest('hex').substring(0, 32);
+}
+
+/**
+ * Extract IP address from request
+ */
+function getIpFromRequest(req) {
+  // Vercel/Cloudflare headers
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.headers['x-real-ip'] || req.socket?.remoteAddress || null;
+}
 
 // Initialize Supabase client
 function getSupabaseClient() {
@@ -58,18 +81,32 @@ async function handleMessage(supabase, data) {
     .eq('id', sessionId)
     .single();
 
-  // Prepare new message for conversation array
-  const newMessage = {
-    index: messageIndex,
-    user: userMessage,
-    bot: botResponse,
-    timestamp: new Date().toISOString()
-  };
+  // Prepare messages for conversation array in correct format
+  const timestamp = new Date().toISOString();
+  const newMessages = [];
+  
+  // Add user message
+  if (userMessage) {
+    newMessages.push({
+      role: "user",
+      content: userMessage,
+      timestamp: timestamp
+    });
+  }
+  
+  // Add assistant response
+  if (botResponse) {
+    newMessages.push({
+      role: "assistant",
+      content: botResponse,
+      timestamp: timestamp
+    });
+  }
 
   if (existingSession) {
     // Update existing session
     const currentConversation = existingSession.conversation || [];
-    currentConversation.push(newMessage);
+    currentConversation.push(...newMessages);
 
     const updateData = {
       total_messages: currentConversation.length,
@@ -97,8 +134,8 @@ async function handleMessage(supabase, data) {
       website: website,
       user_id: userId || null,
       started_at: new Date().toISOString(),
-      total_messages: 1,
-      conversation: [newMessage],
+      total_messages: newMessages.length,
+      conversation: newMessages,
       geo_city: geoCity || null,
       email_submitted: emailSubmitted || false,
       had_product_recommendation: hadProductRecommendation || false,
@@ -268,7 +305,18 @@ export default async function handler(req, res) {
 
   try {
     const supabase = getSupabaseClient();
-    const { action, sessionId, website } = req.body;
+    
+    // Extract IP and generate user_id
+    const userIp = getIpFromRequest(req);
+    const userId = getUserIdFromIp(userIp);
+    
+    // Add userId to request body if not already present
+    const requestData = {
+      ...req.body,
+      userId: req.body.userId || userId
+    };
+    
+    const { action, sessionId, website } = requestData;
 
     // Validate required fields
     if (!action || !sessionId) {
@@ -288,25 +336,25 @@ export default async function handler(req, res) {
             message: 'website is required for message action' 
           });
         }
-        result = await handleMessage(supabase, req.body);
+        result = await handleMessage(supabase, requestData);
         break;
 
       case 'recommendation':
-        result = await handleRecommendation(supabase, req.body);
+        result = await handleRecommendation(supabase, requestData);
         break;
 
       case 'click':
-        if (!req.body.productId) {
+        if (!requestData.productId) {
           return res.status(400).json({ 
             error: 'Bad request',
             message: 'productId is required for click action' 
           });
         }
-        result = await handleClick(supabase, req.body);
+        result = await handleClick(supabase, requestData);
         break;
 
       case 'end_session':
-        result = await handleEndSession(supabase, req.body);
+        result = await handleEndSession(supabase, requestData);
         break;
 
       default:

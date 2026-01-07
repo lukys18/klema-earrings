@@ -124,12 +124,14 @@ JAK SOM:
       if (sessionId && sessionStartTime && messageIndex > 0) {
         const durationSeconds = Math.round((Date.now() - sessionStartTime) / 1000);
         // Use sendBeacon for reliable delivery on page unload
-        const data = JSON.stringify({
+        const data = {
           action: 'end_session',
           sessionId: sessionId,
           durationSeconds: durationSeconds
-        });
-        navigator.sendBeacon('/api/saveChat', data);
+        };
+        // Create Blob with correct content type for sendBeacon
+        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+        navigator.sendBeacon('/api/saveChat', blob);
         console.log('🔚 Session ended, duration:', durationSeconds, 'seconds');
       }
     }
