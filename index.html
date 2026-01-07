@@ -170,9 +170,9 @@ JAK SOM:
       // Start new session
       getSessionId();
       
-      // Add welcome message
+      // Add welcome message (bez quick replies a contact button pri resete)
       const welcomeMessage = "Ahoj! 💕 Som Miška, tvoja osobná asistentka. Rada ti pomôžem nájsť tie najkrajšie náušnice. Čo ťa zaujíma?";
-      appendMessage("Bot", welcomeMessage, "bot", false, true, true);
+      appendMessage("Bot", welcomeMessage, "bot", false, false, false);
       
       console.log('🔄 Chat reset, new session:', sessionId);
     }
@@ -881,10 +881,9 @@ async function saveEmailEventToAPI(botSuccessMessage, emailMessageIndex) {
         const quickRepliesDiv = document.createElement('div');
         quickRepliesDiv.className = 'quick-replies';
         quickRepliesDiv.innerHTML = `
-          <button class="quick-reply-btn" onclick="handleQuickReply('Koľko to stojí?')">Cenník</button>
-          <button class="quick-reply-btn" onclick="handleQuickReply('Ktorý balík si mám vybrať?')">Ktorý balík?</button>
-          <button class="quick-reply-btn" onclick="handleQuickReply('Rezervácia stretnutia')">Konzultácia</button>
-          <button class="quick-reply-btn" onclick="handleQuickReply('Ako dlho trvá vytvorenie?')">Čas realizácie</button>
+          <button class="quick-reply-btn" onclick="handleQuickReply('Aké náušnice máte?')">Náušnice</button>
+          <button class="quick-reply-btn" onclick="handleQuickReply('Aké sú ceny?')">Ceny</button>
+          <button class="quick-reply-btn" onclick="handleQuickReply('Ako funguje doprava?')">Doprava</button>
           <button class="quick-reply-btn" onclick="handleQuickReply('Kontakt')">Kontakt</button>
         `;
         chatbox.appendChild(quickRepliesDiv);
