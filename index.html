@@ -129,7 +129,7 @@ JAK SOM:
           sessionId: sessionId,
           durationSeconds: durationSeconds
         });
-        navigator.sendBeacon('https://ragnetiq-bot.vercel.app/api/saveChat', data);
+        navigator.sendBeacon('/api/saveChat', data);
         console.log('🔚 Session ended, duration:', durationSeconds, 'seconds');
       }
     }
@@ -658,7 +658,7 @@ async function saveChatToAPI(userMessage, botResponse, messageIndex, timeToRespo
     }
     
     // Call the Vercel API endpoint to save the message
-    const response = await fetch('https://ragnetiq-bot.vercel.app/api/saveChat', {
+    const response = await fetch('/api/saveChat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -696,7 +696,7 @@ async function saveChatToAPI(userMessage, botResponse, messageIndex, timeToRespo
  */
 async function saveProductRecommendation(sessionId, website, chatLogId, queryText, category, products) {
   try {
-    const response = await fetch('https://ragnetiq-bot.vercel.app/api/saveChat', {
+    const response = await fetch('/api/saveChat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -734,7 +734,7 @@ async function saveProductRecommendation(sessionId, website, chatLogId, queryTex
  */
 async function logProductClick(productId, productUrl, position) {
   try {
-    const response = await fetch('https://ragnetiq-bot.vercel.app/api/saveChat', {
+    const response = await fetch('/api/saveChat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -789,7 +789,7 @@ async function saveEmailEventToAPI(botSuccessMessage, emailMessageIndex) {
     }
     
     // Call the Vercel API endpoint to save the email event
-    const response = await fetch('https://ragnetiq-bot.vercel.app/api/saveChat', {
+    const response = await fetch('/api/saveChat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
