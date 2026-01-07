@@ -697,6 +697,17 @@ async function saveEmailEventToAPI(botSuccessMessage, emailMessageIndex) {
 
       chatbox.appendChild(msgDiv);
       
+      // Detekcia a zobrazenie produktových kartičiek
+      if (role === 'bot' && window.productsData) {
+        const productCards = detectAndCreateProductCards(message);
+        if (productCards && productCards.length > 0) {
+          const cardsContainer = document.createElement('div');
+          cardsContainer.className = 'product-cards';
+          productCards.forEach(card => cardsContainer.appendChild(card));
+          chatbox.appendChild(cardsContainer);
+        }
+      }
+      
       // Pridaj kontaktné tlačidlo ak je potrebné
       if (role === 'bot' && showContactButton) {
         const browserLang = navigator.language || navigator.userLanguage;
@@ -727,6 +738,82 @@ async function saveEmailEventToAPI(botSuccessMessage, emailMessageIndex) {
       }
 
       chatbox.scrollTop = chatbox.scrollHeight;
+    }
+
+    // Detekcia produktov v správe a vytvorenie kartičiek
+    function detectAndCreateProductCards(message) {
+      if (!window.productsData || !Array.isArray(window.productsData)) {
+        return [];
+      }
+
+      const cards = [];
+      const foundProducts = new Set();
+
+      // Hľadaj produkty podľa názvu v správe
+      window.productsData.forEach(product => {
+        // Normalizuj názvy pre porovnanie
+        const normalizedTitle = product.title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const normalizedMessage = message.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        
+        // Ak správa obsahuje názov produktu alebo jeho významné časti
+        const titleWords = normalizedTitle.split(/\s+/).filter(w => w.length > 3);
+        const matchCount = titleWords.filter(word => normalizedMessage.includes(word)).length;
+        
+        // Ak sa zhoduje aspoň polovica slov z názvu (min. 2 slová)
+        if (matchCount >= Math.max(2, Math.ceil(titleWords.length / 2)) && !foundProducts.has(product.id)) {
+          foundProducts.add(product.id);
+          
+          const card = document.createElement('a');
+          card.className = 'product-card';
+          card.href = product.url;
+          card.target = '_blank';
+          card.rel = 'noopener noreferrer';
+          
+          const img = document.createElement('img');
+          img.className = 'product-card-image';
+          img.src = product.image;
+          img.alt = product.title;
+          img.loading = 'lazy';
+          
+          const content = document.createElement('div');
+          content.className = 'product-card-content';
+          
+          const title = document.createElement('div');
+          title.className = 'product-card-title';
+          title.textContent = product.title;
+          
+          const price = document.createElement('div');
+          price.className = 'product-card-price';
+          price.textContent = `€${product.price.toFixed(2)}`;
+          
+          content.appendChild(title);
+          content.appendChild(price);
+          
+          // Pridaj farby ak existujú
+          if (product.colors && product.colors.length > 0) {
+            const colors = document.createElement('div');
+            colors.className = 'product-card-colors';
+            colors.textContent = `Farby: ${product.colors.join(', ')}`;
+            content.appendChild(colors);
+          }
+          
+          // Pridaj dostupnosť ak existuje
+          if (product.availability) {
+            const availability = document.createElement('div');
+            availability.className = 'product-card-availability';
+            availability.textContent = product.availability;
+            content.appendChild(availability);
+          }
+          
+          card.appendChild(img);
+          card.appendChild(content);
+          
+          cards.push(card);
+        }
+      });
+
+      // Limituj na max 5 produktov
+      return cards.slice(0, 5);
     }
 
     function removeLastBotMessage() {
