@@ -301,6 +301,36 @@ body.iframe-mode #chatbot-container.closed #chatbot-header-closed {
   pointer-events: none;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#reset-chat-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0.7;
+}
+
+#reset-chat-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+  opacity: 1;
+  transform: rotate(180deg);
+}
+
+#reset-chat-btn i {
+  font-size: 14px;
+}
+
 #toggle-icon {
   font-size: 20px;
   font-weight: 300;
@@ -518,6 +548,29 @@ button:hover {
 button:active {
   transform: translateY(0);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Footer credit */
+#footer-credit {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 8px 0 0 0;
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+#footer-credit a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+#footer-credit a:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
 }
 
 /* Quick Reply buttony */

@@ -30,7 +30,12 @@
         </div>
       </div>
       
-      <span id="toggle-icon">+</span>
+      <div class="header-actions">
+        <button id="reset-chat-btn" onclick="event.stopPropagation(); resetChat();" title="Nový rozhovor">
+          <i class="fas fa-rotate-right"></i>
+        </button>
+        <span id="toggle-icon">+</span>
+      </div>
     </div>
 
     <!-- Header pre zatvorený stav -->
@@ -45,6 +50,9 @@
       <div id="input-area">
         <textarea id="user-input" placeholder="Napíšte správu..."></textarea>
         <button onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+      </div>
+      <div id="footer-credit">
+        Vyrobil <a href="https://ragnetiq.com" target="_blank" rel="noopener noreferrer">Ragnetiq</a>
       </div>
     </div>
   </div>
@@ -94,6 +102,7 @@ JAK SOM:
     let sessionId = null;
     let messageIndex = 0;
     let emailSubmittedInSession = false; // Track if email was submitted in this session
+    let sessionStartTime = null; // Track when session started
 
     // Generate NEW session ID every time (on page load/refresh)
     function getSessionId() {
@@ -104,9 +113,68 @@ JAK SOM:
           const v = c == 'x' ? r : (r & 0x3 | 0x8);
           return v.toString(16);
         });
+        sessionStartTime = Date.now();
         console.log('🆔 New session created:', sessionId);
       }
       return sessionId;
+    }
+
+    // End session and calculate duration
+    function endSession() {
+      if (sessionId && sessionStartTime && messageIndex > 0) {
+        const durationSeconds = Math.round((Date.now() - sessionStartTime) / 1000);
+        // Use sendBeacon for reliable delivery on page unload
+        const data = JSON.stringify({
+          action: 'end_session',
+          sessionId: sessionId,
+          durationSeconds: durationSeconds
+        });
+        navigator.sendBeacon('https://ragnetiq-bot.vercel.app/api/saveChat', data);
+        console.log('🔚 Session ended, duration:', durationSeconds, 'seconds');
+      }
+    }
+
+    // End session when page closes
+    window.addEventListener('beforeunload', endSession);
+    window.addEventListener('pagehide', endSession);
+
+    // Reset chat - clears messages and starts new session
+    function resetChat() {
+      // End current session first
+      endSession();
+      
+      // Reset session variables
+      sessionId = null;
+      messageIndex = 0;
+      emailSubmittedInSession = false;
+      sessionStartTime = null;
+      window._cachedGeoCity = null;
+      window._lastRecommendationId = null;
+      
+      // Clear chat messages
+      const chatMessages = document.getElementById('chat-messages');
+      chatMessages.innerHTML = '';
+      
+      // Reset conversation history
+      conversationHistory = [
+        {
+          role: "system",
+          content: `Si Miška, milá asistentka e-shopu Klema Earrings s náušnicami. Odpovedaj VŽDY po slovensky.
+- Buď osobná, milá, a používaj emotikony
+- Používaj oslovenie "ty" nie "Vy"
+- Pri produktoch buď nadšená, ale nie nátlačná
+- Pridaj osobný dotyk - akoby som bola skutočná asistentka v obchode`
+        }
+      ];
+      
+      // Start new session
+      getSessionId();
+      
+      // Add welcome message
+      const welcomeMessage = "Ahoj! 💕 Som Miška, tvoja osobná asistentka. Rada ti pomôžem nájsť tie najkrajšie náušnice. Čo ťa zaujíma?";
+      appendMessage("Bot", welcomeMessage, "bot", false, true, true);
+      
+      console.log('🔄 Chat reset, new session:', sessionId);
     }
 
     // Mark that email was submitted in this session
@@ -226,7 +294,16 @@ JAK SOM:
       container.classList.toggle("closed");
       
       if (container.classList.contains("closed")) {
-        // Zatvorený stav
+        // Zatvorený stav - ukončí session
+        endSession();
+        // Resetuj session pre ďalšie otvorenie
+        sessionId = null;
+        messageIndex = 0;
+        emailSubmittedInSession = false;
+        sessionStartTime = null;
+        window._cachedGeoCity = null;
+        window._lastRecommendationId = null;
+        
         openHeader.style.display = "none";
         closedHeader.style.display = "block";
         // Informuj parent o zatvorení
@@ -234,7 +311,9 @@ JAK SOM:
           window.parent.postMessage({ type: "chatbot-closed" }, "*");
         }
       } else {
-        // Otvorený stav
+        // Otvorený stav - začni novú session
+        getSessionId();
+        
         openHeader.style.display = "flex";
         closedHeader.style.display = "none";
         icon.innerText = "−";
@@ -530,14 +609,15 @@ function categorizeMessage(message) {
 }
 
 /**
- * Saves chat interaction to Vercel API endpoint with enhanced metrics
+ * Saves chat interaction to Vercel API endpoint with new structure
  * @param {string} userMessage - The user's message
  * @param {string} botResponse - The bot's response
  * @param {number} messageIndex - Index of message in session
  * @param {number} timeToRespond - Response time in milliseconds
  * @param {string} category - Message category
+ * @param {Array} recommendedProducts - Optional array of recommended products
  */
-async function saveChatToAPI(userMessage, botResponse, messageIndex, timeToRespond, category) {
+async function saveChatToAPI(userMessage, botResponse, messageIndex, timeToRespond, category, recommendedProducts = null) {
   try {
     // Get the current website's hostname
     const website = window.location.hostname;
@@ -545,63 +625,124 @@ async function saveChatToAPI(userMessage, botResponse, messageIndex, timeToRespo
     // Get session ID
     const currentSessionId = getSessionId();
     
-    // Get user's IP address and geolocation
-    let ipAddress = null;
-    let geoLocationCity = null;
+    // Get geolocation (cached after first call)
+    let geoCity = null;
     
     try {
-      // Get IP address
-      const ipResponse = await fetch('https://api.ipify.org?format=json');
-      if (ipResponse.ok) {
-        const ipData = await ipResponse.json();
-        ipAddress = ipData.ip;
-        
-        // Get geolocation based on IP
-        try {
-          const geoResponse = await fetch(`https://ipapi.co/${ipAddress}/json/`);
+      if (!window._cachedGeoCity) {
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        if (ipResponse.ok) {
+          const ipData = await ipResponse.json();
+          const geoResponse = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
           if (geoResponse.ok) {
             const geoData = await geoResponse.json();
-            geoLocationCity = geoData.city || null;
-            console.log('📍 Location detected:', geoLocationCity);
+            window._cachedGeoCity = geoData.city || null;
+            console.log('📍 Location detected:', window._cachedGeoCity);
           }
-        } catch (geoError) {
-          console.warn('Could not fetch geolocation:', geoError.message);
         }
       }
-    } catch (ipError) {
-      console.warn('Could not fetch IP address:', ipError.message);
+      geoCity = window._cachedGeoCity;
+    } catch (geoError) {
+      console.warn('Could not fetch geolocation:', geoError.message);
     }
     
-    // Call the Vercel API endpoint to save the chat
+    // Call the Vercel API endpoint to save the message
     const response = await fetch('https://ragnetiq-bot.vercel.app/api/saveChat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
+        action: 'message',
+        sessionId: currentSessionId,
+        website: website,
         userMessage: userMessage,
         botResponse: botResponse,
-        website: website,
-        ipAddress: ipAddress,
-        sessionId: currentSessionId,
         messageIndex: messageIndex,
-        timeToRespond: timeToRespond,
-        category: category,
-        geoLocationCity: geoLocationCity,
-        emailSubmitted: emailSubmittedInSession  // Boolean flag from session
+        geoCity: geoCity,
+        emailSubmitted: emailSubmittedInSession,
+        hadProductRecommendation: recommendedProducts && recommendedProducts.length > 0
       })
     });
 
-    // Check if the save was successful
     if (response.ok) {
       console.log('✅ Chat saved successfully to database');
+      
+      // If there are recommended products, log them separately
+      if (recommendedProducts && recommendedProducts.length > 0) {
+        await saveProductRecommendation(currentSessionId, website, messageIndex, userMessage, category, recommendedProducts);
+      }
     } else {
-      // Log error but don't interrupt the user experience
       console.warn('⚠️ Failed to save chat:', response.status, response.statusText);
     }
   } catch (error) {
-    // Handle errors gracefully - log to console but don't show to user
     console.error('❌ Error saving chat to API:', error.message);
+  }
+}
+
+/**
+ * Saves product recommendation to database
+ */
+async function saveProductRecommendation(sessionId, website, chatLogId, queryText, category, products) {
+  try {
+    const response = await fetch('https://ragnetiq-bot.vercel.app/api/saveChat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        action: 'recommendation',
+        sessionId: sessionId,
+        website: website,
+        chatLogId: chatLogId,
+        queryText: queryText,
+        category: category,
+        products: products.map((p, index) => ({
+          productId: p.id || p.url || `product-${index}`,
+          productName: p.title || p.name,
+          productUrl: p.url,
+          position: index + 1,
+          price: p.price
+        }))
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Product recommendation saved, ID:', data.recommendationId);
+      // Store recommendation ID for click tracking
+      window._lastRecommendationId = data.recommendationId;
+    }
+  } catch (error) {
+    console.error('❌ Error saving product recommendation:', error.message);
+  }
+}
+
+/**
+ * Logs product click to database
+ */
+async function logProductClick(productId, productUrl, position) {
+  try {
+    const response = await fetch('https://ragnetiq-bot.vercel.app/api/saveChat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        action: 'click',
+        sessionId: getSessionId(),
+        website: window.location.hostname,
+        productId: productId || productUrl,
+        position: position,
+        recommendationId: window._lastRecommendationId
+      })
+    });
+
+    if (response.ok) {
+      console.log('✅ Product click logged');
+    }
+  } catch (error) {
+    console.error('❌ Error logging product click:', error.message);
   }
 }
 
@@ -616,28 +757,24 @@ async function saveEmailEventToAPI(botSuccessMessage, emailMessageIndex) {
     const website = window.location.hostname;
     const currentSessionId = getSessionId();
     
-    // Get user's IP address and geolocation
-    let ipAddress = null;
-    let geoLocationCity = null;
+    // Get geolocation (use cached value if available)
+    let geoCity = window._cachedGeoCity || null;
     
-    try {
-      const ipResponse = await fetch('https://api.ipify.org?format=json');
-      if (ipResponse.ok) {
-        const ipData = await ipResponse.json();
-        ipAddress = ipData.ip;
-        
-        try {
-          const geoResponse = await fetch(`https://ipapi.co/${ipAddress}/json/`);
+    if (!geoCity) {
+      try {
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        if (ipResponse.ok) {
+          const ipData = await ipResponse.json();
+          const geoResponse = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
           if (geoResponse.ok) {
             const geoData = await geoResponse.json();
-            geoLocationCity = geoData.city || null;
+            geoCity = geoData.city || null;
+            window._cachedGeoCity = geoCity;
           }
-        } catch (geoError) {
-          console.warn('Could not fetch geolocation:', geoError.message);
         }
+      } catch (geoError) {
+        console.warn('Could not fetch geolocation:', geoError.message);
       }
-    } catch (ipError) {
-      console.warn('Could not fetch IP address:', ipError.message);
     }
     
     // Call the Vercel API endpoint to save the email event
@@ -647,15 +784,13 @@ async function saveEmailEventToAPI(botSuccessMessage, emailMessageIndex) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
+        action: 'message',
+        sessionId: currentSessionId,
+        website: website,
         userMessage: 'Správa poslaná',
         botResponse: botSuccessMessage,
-        website: website,
-        ipAddress: ipAddress,
-        sessionId: currentSessionId,
-        messageIndex: emailMessageIndex, // Proper sequential message index
-        timeToRespond: null,
-        category: 'Email',
-        geoLocationCity: geoLocationCity,
+        messageIndex: emailMessageIndex,
+        geoCity: geoCity,
         emailSubmitted: true
       })
     });
@@ -669,8 +804,6 @@ async function saveEmailEventToAPI(botSuccessMessage, emailMessageIndex) {
     console.error('❌ Error saving email event to API:', error.message);
   }
 }
-
-
 
 
 
