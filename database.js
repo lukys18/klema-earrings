@@ -1,7 +1,7 @@
 // database.js
 // Michaela Klema Earrings - Knowledge Base pre RAG chatbot
-// Produktové dáta sa načítavajú dynamicky zo Shopify API
-// Tento súbor obsahuje statické informácie o e-shope
+// Tento súbor obsahuje STATICKÉ informácie o e-shope
+// PRODUKTY sú v separátnom súbore: products-database.js
 
 window.aiPowerData = {
   

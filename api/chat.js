@@ -139,9 +139,9 @@ async function processWithRAG(query, host) {
   console.log('🧠 RAG processing query:', query);
   
   try {
-    // Načítaj produkty z cache
+    // Načítaj produkty zo statickej databázy
     const baseUrl = `https://${host}`;
-    const response = await fetch(`${baseUrl}/api/syncProducts`, {
+    const response = await fetch(`${baseUrl}/api/products`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     });

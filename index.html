@@ -54,13 +54,14 @@
 
   
 <script src="database.js"></script>
+<script src="products-database.js"></script>
 <script src="rag-system.js"></script>
 
   <script>
     let chatHistory = [
       {
         role: "system",
-        content: "Si priateľský asistent e-shopu Michaela Klema Earrings. DÔLEŽITÉ PRAVIDLÁ: 1) POUŽÍVAJ INFORMÁCIE Z KONTEXTU - produkty, ceny, dostupnosť zo Shopify a knowledge base. 2) Pri produktoch VŽDY uveď: názov, cenu, dostupnosť. 3) Zdôrazňuj, že náušnice sú HANDMADE, slovenská výroba, ľahučké. 4) Pri doprave pripomeň DOPRAVU ZDARMA nad 50€. 5) Pri zľavách spomeň 10% zľavu na prvý nákup cez newsletter. 6) Odpovedaj priateľsky a osobne, ako by odpovedala Michaela (Miška). 7) Pri zákazkových objednávkach nasmeruj na email alebo Instagram. 8) Ak nemáš informácie, odporuč kontaktovať priamo Michaelu. 9) PAMÄTAJ SI celú konverzáciu. 10) Formátuj odpovede prehľadne s emoji ✨💍🎁"
+        content: "Si priateľský asistent e-shopu Michaela Klema Earrings. DÔLEŽITÉ PRAVIDLÁ: 1) POUŽÍVAJ INFORMÁCIE Z KONTEXTU - produkty, ceny zo znalostnej databázy. 2) Pri produktoch VŽDY uveď: názov a cenu. 3) Zdôrazňuj, že náušnice sú HANDMADE, slovenská výroba, ľahučké. 4) Pri doprave pripomeň DOPRAVU ZDARMA nad 50€. 5) Pri zľavách spomeň 10% zľavu na prvý nákup cez newsletter. 6) Odpovedaj priateľsky a osobne, ako by odpovedala Michaela (Miška). 7) Pri zákazkových objednávkach nasmeruj na email alebo Instagram. 8) Ak nemáš informácie, odporuč kontaktovať priamo Michaelu. 9) PAMÄTAJ SI celú konverzáciu. 10) Formátuj odpovede prehľadne s emoji ✨💍🎁"
       }
     ];
 
@@ -95,9 +96,34 @@
       // Initialize session
       getSessionId();
       
-      if (window.aiPowerData && window.RAGSystem) {
-        ragSystem = new window.RAGSystem(window.aiPowerData.knowledgeBase);
-        console.log('RAG systém inicializovaný s', window.aiPowerData.knowledgeBase.length, 'záznamami');
+      // Kombinuj knowledge base a produkty
+      let combinedKnowledgeBase = [];
+      
+      if (window.aiPowerData && window.aiPowerData.knowledgeBase) {
+        combinedKnowledgeBase = [...window.aiPowerData.knowledgeBase];
+      }
+      
+      // Pridaj produkty z products-database.js
+      if (window.productsData && Array.isArray(window.productsData)) {
+        console.log('📦 Načítaných', window.productsData.length, 'produktov');
+        // Konvertuj produkty na knowledge base formát
+        window.productsData.forEach(product => {
+          combinedKnowledgeBase.push({
+            id: product.id,
+            category: 'produkt',
+            title: product.title,
+            content: `${product.title} - cena: €${product.price.toFixed(2)}. ${product.description || ''} ${product.infoTexts ? product.infoTexts.join(', ') : ''}`,
+            keywords: product.keywords || [],
+            url: product.url,
+            price: product.price,
+            image: product.image
+          });
+        });
+      }
+      
+      if (window.RAGSystem && combinedKnowledgeBase.length > 0) {
+        ragSystem = new window.RAGSystem(combinedKnowledgeBase);
+        console.log('RAG systém inicializovaný s', combinedKnowledgeBase.length, 'záznamami');
       }
       
       // Zobrazenie úvodnej správy
