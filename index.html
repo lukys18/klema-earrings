@@ -683,14 +683,34 @@ async function saveEmailEventToAPI(botSuccessMessage, emailMessageIndex) {
       if (isTemp && message === "typing") {
         msgDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
       } else {
+        // Vyčisti markdown formátovanie z AI odpovede
+        let formattedMessage = message;
+        
+        // Odstráň horizontálne čiary (---)
+        formattedMessage = formattedMessage.replace(/^---+$/gm, '');
+        
+        // Odstráň markdown headingy (###) ale ponechaj text
+        formattedMessage = formattedMessage.replace(/^###\s+/gm, '');
+        formattedMessage = formattedMessage.replace(/^##\s+/gm, '');
+        formattedMessage = formattedMessage.replace(/^#\s+/gm, '');
+        
+        // Odstráň emoji číslovanie na začiatku riadkov (napr. "1.", "2.")
+        formattedMessage = formattedMessage.replace(/^\d+\.\s+/gm, '• ');
+        
+        // Odstráň viacnásobné prázdne riadky
+        formattedMessage = formattedMessage.replace(/\n{3,}/g, '\n\n');
+        
         // Spracovanie **text** na <strong>text</strong>
-        let formattedMessage = message.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        formattedMessage = formattedMessage.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
         
         // Automatické vytvorenie hyperlinkov z URL
         formattedMessage = formattedMessage.replace(
           /(https?:\/\/[^\s<]+)(?![^<]*>)/g,
           '<a href="$1" target="_blank">$1</a>'
         );
+        
+        // Trim prázdne znaky na začiatku a konci
+        formattedMessage = formattedMessage.trim();
 
         msgDiv.innerHTML = formattedMessage;
       }
