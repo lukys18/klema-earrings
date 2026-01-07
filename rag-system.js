@@ -27,7 +27,7 @@ class RAGSystem {
       'kupit': ['objednat', 'nakupit', 'buy', 'purchase', 'order', 'pridat do kosika', 'chcem', 'kúpiť'],
       'hladat': ['najst', 'vyhladat', 'search', 'find', 'kde', 'aky', 'ktory', 'odporucit', 'poradit'],
       'kategoria': ['typ', 'druh', 'category', 'kolekcia', 'sekcia', 'rada', 'vianocna', 'svadobna', 'jesenna'],
-      'farba': ['color', 'colour', 'odtien', 'farby', 'farebny', 'cierna', 'biela', 'cervena', 'zlata', 'strieborne', 'bordova'],
+      'farba': ['color', 'colour', 'odtien', 'farby', 'farebny', 'cierna', 'biela', 'cervena', 'zlata', 'strieborne', 'bordova', 'zelena', 'lesna', 'modra', 'fialova', 'ruzova', 'hneda', 'oranzova'],
       'kontakt': ['spojenie', 'informacie', 'udaje', 'email', 'telefon', 'adresa', 'michaela', 'miska'],
       'pomoc': ['podpora', 'help', 'support', 'asistencia', 'pomoc', 'otazka'],
       'doprava': ['dorucenie', 'shipping', 'delivery', 'postovne', 'zasielka', 'kurier', 'posta', 'packeta', 'balíkobox'],
@@ -43,12 +43,13 @@ class RAGSystem {
     // Intent detection patterns pre náušnice a šperky
     this.productIntents = {
       'search_product': ['hladam', 'najdi', 'chcem', 'potrebujem', 'mate', 'ponukate', 'máte', 'kde najdem', 'nausnice', 'sperk'],
-      'check_availability': ['skladom', 'dostupny', 'dostupne', 'mam k dispozicii', 'je', 'su', 'availability'],
+      'check_availability': ['skladom', 'dostupny', 'dostupne', 'mam k dispozicii', 'je', 'su', 'availability', 'maju', 'dostupnost'],
       'get_price': ['cena', 'kolko stoji', 'price', 'koľko', 'za kolko', 'koľko stojí'],
       'find_discount': ['zlava', 'akcia', 'zlacnene', 'discount', 'promo', 'kupón', 'newsletter', '10%'],
       'recommend': ['odporuc', 'porad', 'navrhni', 'co odporucas', 'co by si', 'najlepsie', 'doporučíš', 'dar', 'darcek'],
       'compare': ['porovnaj', 'rozdiel', 'compare', 'lepsi', 'horsí', 'vs'],
       'category_browse': ['kategoria', 'kolekcia', 'vsetky', 'zobraz', 'ukaz', 'ponuka', 'vianocne', 'svadobne', 'jesenne'],
+      'filter_by_color': ['farba', 'farby', 'color', 'cervena', 'biela', 'cierna', 'zlata', 'zelena', 'modra', 'fialova', 'ruzova'],
       'custom_order': ['na mieru', 'zakazka', 'custom', 'vlastny dizajn', 'personalizacia', 'na zelanie'],
       'care_info': ['starostlivost', 'udrzba', 'cistenie', 'ako sa starat', 'vydrzia', 'osetrovanie']
     };
@@ -80,6 +81,32 @@ class RAGSystem {
     return productKeywords.some(keyword => normalizedQuery.includes(keyword));
   }
 
+  // NOVÉ: Detekcia farby v query
+  detectColorInQuery(query) {
+    const normalizedQuery = this.normalizeText(query);
+    const colorMap = {
+      'cervena': ['cervena', 'cervene', 'red'],
+      'biela': ['biela', 'biele', 'white', 'sniehobiela'],
+      'cierna': ['cierna', 'cierne', 'black'],
+      'zelena': ['zelena', 'zelene', 'green', 'lesna zelena', 'smaragdova'],
+      'modra': ['modra', 'modre', 'blue', 'tmavomodra'],
+      'zlata': ['zlata', 'zlate', 'gold', 'pozlatene'],
+      'strieborne': ['strieborne', 'strieborn', 'silver'],
+      'fialova': ['fialova', 'fialove', 'purple', 'lila'],
+      'ruzova': ['ruzova', 'ruzove', 'pink', 'pastelova'],
+      'hneda': ['hneda', 'hnede', 'brown'],
+      'oranzova': ['oranzova', 'oranzove', 'orange'],
+      'bordova': ['bordova', 'bordove', 'burgundy', 'vinovocervena']
+    };
+    
+    for (const [color, variations] of Object.entries(colorMap)) {
+      if (variations.some(v => normalizedQuery.includes(v))) {
+        return color;
+      }
+    }
+    return null;
+  }
+
   // Hlavná metóda pre vyhľadávanie relevantného obsahu
   searchRelevantContent(query, maxResults = 3) {
     const normalizedQuery = this.normalizeText(query);
@@ -103,7 +130,7 @@ class RAGSystem {
     return results;
   }
 
-  // NOVÉ: Vyhľadávanie v produktoch zo Shopify
+  // NOVÉ: Vyhľadávanie v produktoch
   searchProducts(query, products, maxResults = 5) {
     if (!products || products.length === 0) {
       return [];
@@ -120,6 +147,9 @@ class RAGSystem {
       const normalizedType = this.normalizeText(product.product_type || '');
       const normalizedVendor = this.normalizeText(product.vendor || '');
       const normalizedTags = (product.tags || []).map(t => this.normalizeText(t)).join(' ');
+      const normalizedColors = (product.colors || []).map(c => this.normalizeText(c)).join(' ');
+      const normalizedAvailability = this.normalizeText(product.availability || '');
+      const normalizedInfoTexts = (product.infoTexts || []).map(t => this.normalizeText(t)).join(' ');
 
       expandedWords.forEach(word => {
         // Názov produktu - najvyššia priorita
@@ -129,6 +159,11 @@ class RAGSystem {
           if (normalizedTitle.startsWith(word)) {
             score += 5;
           }
+        }
+        
+        // Farby - vysoká priorita
+        if (normalizedColors.includes(word)) {
+          score += 8;
         }
         
         // Typ produktu
@@ -146,6 +181,16 @@ class RAGSystem {
           score += 5;
         }
         
+        // Dostupnosť
+        if (normalizedAvailability.includes(word)) {
+          score += 4;
+        }
+        
+        // InfoTexts (materiál, dĺžka, atď.)
+        if (normalizedInfoTexts.includes(word)) {
+          score += 3;
+        }
+        
         // Popis
         if (normalizedDesc.includes(word)) {
           score += 3;
@@ -158,7 +203,7 @@ class RAGSystem {
       }
 
       // Bonus za dostupnosť
-      if (product.available) {
+      if (product.availability && !normalizedAvailability.includes('vypredane')) {
         score += 2;
       }
 
@@ -176,7 +221,8 @@ class RAGSystem {
     console.log('Product Search Results:', scoredProducts.map(p => ({ 
       title: p.title, 
       score: p.relevanceScore,
-      available: p.available,
+      availability: p.availability,
+      colors: p.colors,
       price: p.price 
     })));
 
@@ -189,7 +235,12 @@ class RAGSystem {
 
     // Filter podľa dostupnosti
     if (filters.available !== undefined) {
-      filtered = filtered.filter(p => p.available === filters.available);
+      filtered = filtered.filter(p => {
+        if (!p.availability) return filters.available === false;
+        const avail = this.normalizeText(p.availability);
+        const isAvailable = !avail.includes('vypredane') && !avail.includes('nedostupne');
+        return isAvailable === filters.available;
+      });
     }
 
     // Filter podľa ceny
@@ -198,6 +249,15 @@ class RAGSystem {
     }
     if (filters.maxPrice !== undefined) {
       filtered = filtered.filter(p => p.price <= filters.maxPrice);
+    }
+
+    // Filter podľa farby
+    if (filters.color) {
+      const normalizedColor = this.normalizeText(filters.color);
+      filtered = filtered.filter(p => {
+        if (!p.colors || p.colors.length === 0) return false;
+        return p.colors.some(c => this.normalizeText(c).includes(normalizedColor));
+      });
     }
 
     // Filter podľa zľavy

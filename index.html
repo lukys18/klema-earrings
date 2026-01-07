@@ -61,7 +61,32 @@
     let chatHistory = [
       {
         role: "system",
-        content: "Si priateľský asistent e-shopu Michaela Klema Earrings. DÔLEŽITÉ PRAVIDLÁ: 1) POUŽÍVAJ INFORMÁCIE Z KONTEXTU - produkty, ceny zo znalostnej databázy. 2) Pri produktoch VŽDY uveď: názov a cenu. 3) Zdôrazňuj, že náušnice sú HANDMADE, slovenská výroba, ľahučké. 4) Pri doprave pripomeň DOPRAVU ZDARMA nad 50€. 5) Pri zľavách spomeň 10% zľavu na prvý nákup cez newsletter. 6) Odpovedaj priateľsky a osobne, ako by odpovedala Michaela (Miška). 7) Pri zákazkových objednávkach nasmeruj na email alebo Instagram. 8) Ak nemáš informácie, odporuč kontaktovať priamo Michaelu. 9) PAMÄTAJ SI celú konverzáciu. 10) Formátuj odpovede prehľadne s emoji ✨💍🎁"
+        content: `Si Miška - priateľská a milá asistentka e-shopu Michaela Klema Earrings! 💕
+
+JAK SOM:
+- Som tu, aby som ti pomohla nájsť tie správne náušnice
+- Rada poradím s výberom, odpoviem na otázky a pomôžem ti s nákupom
+- Som nadšená z našich šperkov a veľmi rada o nich rozprávam
+- Komunikujem priateľsky, osobne a s úsmevom ✨
+
+ČO MUSÍM ROBIŤ:
+1. VŽDY používaj informácie z kontextu (produkty, ceny, farby, dostupnosť)
+2. Pri produktoch VŽDY uveď: názov, cenu a ak sú k dispozícii aj farby
+3. Zdôrazňuj, že náušnice sú HANDMADE, slovenská výroba, ľahučké na nosenie
+4. Pri doprave pripomeň DOPRAVU ZDARMA nad 50€
+5. Pri zľavách spomeň 10% zľavu na prvý nákup po prihlásení na newsletter
+6. Pri zákazkách na mieru nasmeruj zákazníka na email michaelaklemaearrings@gmail.com alebo Instagram
+7. Ak niečo neviem, odporučím kontaktovať Michaelu
+8. PAMÄTAJ SI celú konverzáciu - zákazník nemusí opakovať info
+9. Formátuj odpovede prehľadne s emoji (💍✨🎁💕🌸)
+10. Pri odporúčaní produktov zvýrazni ich jedinečnosť a vhodnosť pre konkrétnu príležitosť
+
+ŠTÝL KOMUNIKÁCIE:
+- Oslovuj priateľsky, ako kamarátka ktorá rada pomôže
+- Buď empatická a pozorná k potrebám zákazníka
+- Používaj oslovenie "ty" nie "Vy"
+- Pri produktoch buď nadšená, ale nie nátlačná
+- Pridaj osobný dotyk - akoby som bola skutočná asistentka v obchode`
       }
     ];
 
@@ -108,15 +133,37 @@
         console.log('📦 Načítaných', window.productsData.length, 'produktov');
         // Konvertuj produkty na knowledge base formát
         window.productsData.forEach(product => {
+          // Vytvor rozšírený content s všetkými informáciami
+          let contentParts = [
+            `${product.title} - cena: €${product.price.toFixed(2)}`,
+            product.description || ''
+          ];
+          
+          if (product.availability) {
+            contentParts.push(`Dostupnosť: ${product.availability}`);
+          }
+          
+          if (product.colors && product.colors.length > 0) {
+            contentParts.push(`Dostupné farby: ${product.colors.join(', ')}`);
+          }
+          
+          if (product.infoTexts && product.infoTexts.length > 0) {
+            contentParts.push(product.infoTexts.join(', '));
+          }
+          
           combinedKnowledgeBase.push({
             id: product.id,
             category: 'produkt',
             title: product.title,
-            content: `${product.title} - cena: €${product.price.toFixed(2)}. ${product.description || ''} ${product.infoTexts ? product.infoTexts.join(', ') : ''}`,
+            content: contentParts.filter(p => p).join('. '),
             keywords: product.keywords || [],
             url: product.url,
             price: product.price,
-            image: product.image
+            image: product.image,
+            availability: product.availability,
+            colors: product.colors,
+            infoTexts: product.infoTexts,
+            description: product.description
           });
         });
       }
