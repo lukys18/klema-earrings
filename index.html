@@ -569,7 +569,11 @@ async function sendMessage() {
     // AUTOMATIC CHAT SAVING TO VERCEL API WITH METRICS
     // This sends every conversation to your Vercel database endpoint
     // ============================================================
-    saveChatToAPI(message, reply, currentMessageIndex, timeToRespond, category);
+    // Get detected products if any
+    const recommendedProducts = window._lastDetectedProducts || null;
+    window._lastDetectedProducts = null; // Clear after use
+    
+    saveChatToAPI(message, reply, currentMessageIndex, timeToRespond, category, recommendedProducts);
 
   } catch (error) {
     console.error("Chyba:", error);
@@ -710,13 +714,7 @@ async function saveProductRecommendation(sessionId, website, chatLogId, queryTex
         chatLogId: chatLogId,
         queryText: queryText,
         category: category,
-        products: products.map((p, index) => ({
-          productId: p.id || p.url || `product-${index}`,
-          productName: p.title || p.name,
-          productUrl: p.url,
-          position: index + 1,
-          price: p.price
-        }))
+        products: products // Products are already in correct format
       })
     });
 
@@ -865,12 +863,18 @@ async function saveEmailEventToAPI(botSuccessMessage, emailMessageIndex) {
       
       // Detekcia a zobrazenie produktových kartičiek
       if (role === 'bot' && window.productsData) {
-        const productCards = detectAndCreateProductCards(message);
-        if (productCards && productCards.length > 0) {
+        const result = detectAndCreateProductCards(message);
+        if (result.cards && result.cards.length > 0) {
           const cardsContainer = document.createElement('div');
           cardsContainer.className = 'product-cards';
-          productCards.forEach(card => cardsContainer.appendChild(card));
+          result.cards.forEach(card => cardsContainer.appendChild(card));
           chatbox.appendChild(cardsContainer);
+          
+          // Save product recommendation to database
+          if (!isTemp && result.products && result.products.length > 0) {
+            // Store products for later use in saveChatToAPI
+            window._lastDetectedProducts = result.products;
+          }
         }
       }
       
@@ -908,10 +912,11 @@ async function saveEmailEventToAPI(botSuccessMessage, emailMessageIndex) {
     // Detekcia produktov v správe a vytvorenie kartičiek
     function detectAndCreateProductCards(message) {
       if (!window.productsData || !Array.isArray(window.productsData)) {
-        return [];
+        return { cards: [], products: [] };
       }
 
       const cards = [];
+      const products = [];
       const foundProducts = new Set();
 
       // Hľadaj produkty podľa názvu v správe
@@ -928,11 +933,27 @@ async function saveEmailEventToAPI(botSuccessMessage, emailMessageIndex) {
         if (matchCount >= Math.max(2, Math.ceil(titleWords.length / 2)) && !foundProducts.has(product.id)) {
           foundProducts.add(product.id);
           
+          // Add to products array for tracking
+          products.push({
+            productId: product.id || product.url,
+            productName: product.title,
+            productUrl: product.url,
+            position: products.length + 1,
+            price: product.price
+          });
+          
           const card = document.createElement('a');
           card.className = 'product-card';
           card.href = product.url;
           card.target = '_blank';
           card.rel = 'noopener noreferrer';
+          card.dataset.productId = product.id || product.url;
+          card.dataset.position = products.length;
+          
+          // Add click tracking
+          card.addEventListener('click', function(e) {
+            logProductClick(this.dataset.productId, product.url, parseInt(this.dataset.position));
+          });
           
           const img = document.createElement('img');
           img.className = 'product-card-image';
@@ -978,7 +999,10 @@ async function saveEmailEventToAPI(botSuccessMessage, emailMessageIndex) {
       });
 
       // Limituj na max 5 produktov
-      return cards.slice(0, 5);
+      return {
+        cards: cards.slice(0, 5),
+        products: products.slice(0, 5)
+      };
     }
 
     function removeLastBotMessage() {
