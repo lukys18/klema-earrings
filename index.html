@@ -170,9 +170,20 @@ JAK SOM:
       // Start new session
       getSessionId();
       
-      // Add welcome message (bez quick replies a contact button pri resete)
-      const welcomeMessage = "Ahoj! 💕 Som Miška, tvoja osobná asistentka. Rada ti pomôžem nájsť tie najkrajšie náušnice. Čo ťa zaujíma?";
-      appendMessage("Bot", welcomeMessage, "bot", false, false, false);
+      // Add welcome message - rovnaká ako pri prvom načítaní
+      appendMessage("Miška", "Ahoj! 👋✨ Som Miška, tvoja asistentka v e-shope Klema Earrings. Pomôžem ti nájsť tie správne náušnice, poradím s výberom alebo odpoviem na tvoje otázky. Čo ťa zaujíma?", "bot", false, false, false);
+      
+      // Add quick replies - rovnaké ako pri prvom načítaní
+      const quickRepliesDiv = document.createElement('div');
+      quickRepliesDiv.className = 'quick-replies';
+      quickRepliesDiv.innerHTML = `
+        <button class="quick-reply-btn" onclick="handleQuickReply('Aké náušnice máte?')">Náušnice</button>
+        <button class="quick-reply-btn" onclick="handleQuickReply('Máte nejaké zľavy?')">Zľavy</button>
+        <button class="quick-reply-btn" onclick="handleQuickReply('Aké sú možnosti dopravy?')">Doprava</button>
+        <button class="quick-reply-btn" onclick="handleQuickReply('Robíte aj na zákazku?')">Na mieru</button>
+        <button class="quick-reply-btn" onclick="handleQuickReply('Kontakt')">Kontakt</button>
+      `;
+      chatbox.appendChild(quickRepliesDiv);
       
       console.log('🔄 Chat reset, new session:', sessionId);
     }
