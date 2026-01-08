@@ -103,6 +103,7 @@ JAK SOM:
     let messageIndex = 0;
     let emailSubmittedInSession = false; // Track if email was submitted in this session
     let sessionStartTime = null; // Track when session started
+    let feedbackShownInSession = false; // Track if feedback was shown in this session
 
     // Generate NEW session ID every time (on page load/refresh)
     function getSessionId() {
@@ -150,6 +151,7 @@ JAK SOM:
       messageIndex = 0;
       emailSubmittedInSession = false;
       sessionStartTime = null;
+      feedbackShownInSession = false;
       window._cachedGeoCity = null;
       window._lastRecommendationId = null;
       
@@ -314,6 +316,7 @@ JAK SOM:
         messageIndex = 0;
         emailSubmittedInSession = false;
         sessionStartTime = null;
+        feedbackShownInSession = false;
         window._cachedGeoCity = null;
         window._lastRecommendationId = null;
         
@@ -433,6 +436,100 @@ JAK SOM:
       // Nastav otázku do input fieldu a odošli ju
       inputField.value = question;
       sendMessage();
+    }
+
+    // Show feedback widget after first bot response
+    function showFeedbackWidget() {
+      // Only show once per session and only if not already shown
+      if (feedbackShownInSession) return;
+      
+      feedbackShownInSession = true;
+      
+      const header = document.getElementById('chatbot-header');
+      const existingFeedback = document.getElementById('feedback-widget');
+      
+      // Don't show if already exists
+      if (existingFeedback) return;
+      
+      const feedbackDiv = document.createElement('div');
+      feedbackDiv.id = 'feedback-widget';
+      feedbackDiv.className = 'feedback-widget';
+      feedbackDiv.innerHTML = `
+        <div class="feedback-content">
+          <span class="feedback-text">Bola odpoveď užitočná?</span>
+          <div class="feedback-buttons">
+            <button class="feedback-btn" onclick="submitFeedback('positive')" title="Áno">
+              <i class="fas fa-thumbs-up"></i>
+            </button>
+            <button class="feedback-btn" onclick="submitFeedback('negative')" title="Nie">
+              <i class="fas fa-thumbs-down"></i>
+            </button>
+          </div>
+        </div>
+      `;
+      
+      // Insert after header
+      header.parentNode.insertBefore(feedbackDiv, header.nextSibling);
+      
+      // Animate slide down
+      setTimeout(() => {
+        feedbackDiv.classList.add('show');
+      }, 100);
+      
+      // Auto-hide after 10 seconds if not clicked
+      setTimeout(() => {
+        if (feedbackDiv && feedbackDiv.parentNode) {
+          feedbackDiv.classList.add('hiding');
+          setTimeout(() => {
+            if (feedbackDiv && feedbackDiv.parentNode) {
+              feedbackDiv.remove();
+            }
+          }, 300);
+        }
+      }, 10000);
+    }
+
+    // Submit feedback to database
+    async function submitFeedback(value) {
+      const feedbackWidget = document.getElementById('feedback-widget');
+      if (!feedbackWidget) return;
+      
+      try {
+        const response = await fetch('/api/saveChat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            action: 'feedback',
+            sessionId: getSessionId(),
+            feedbackValue: value
+          })
+        });
+
+        if (response.ok) {
+          console.log('✅ Feedback saved:', value);
+          
+          // Show thank you message
+          feedbackWidget.innerHTML = `
+            <div class="feedback-content feedback-thanks">
+              <span class="feedback-text">Ďakujeme za spätnú väzbu! 💕</span>
+            </div>
+          `;
+          
+          // Hide after 2 seconds
+          setTimeout(() => {
+            feedbackWidget.classList.add('hiding');
+            setTimeout(() => {
+              if (feedbackWidget.parentNode) {
+                feedbackWidget.remove();
+              }
+            }, 300);
+          }, 2000);
+        }
+      } catch (error) {
+        console.error('❌ Error saving feedback:', error);
+      }
     }
 
     function delay(ms) {
@@ -564,6 +661,13 @@ async function sendMessage() {
     
     // Pridaj odpoveď asistenta do histórie pre budúcu pamäť
     chatHistory.push({ role: "assistant", content: reply });
+    
+    // Show feedback widget after first bot response (messageIndex === 1 means first exchange)
+    if (messageIndex === 1) {
+      setTimeout(() => {
+        showFeedbackWidget();
+      }, 500);
+    }
 
     // ============================================================
     // AUTOMATIC CHAT SAVING TO VERCEL API WITH METRICS

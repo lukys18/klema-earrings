@@ -277,6 +277,25 @@ async function handleEndSession(supabase, data) {
   return { action: 'session_ended', data: updated };
 }
 
+/**
+ * Handle feedback action - save user feedback (thumbs up/down)
+ */
+async function handleFeedback(supabase, data) {
+  const { sessionId, feedbackValue } = data;
+
+  // Update session with feedback
+  const { data: updated, error } = await supabase
+    .from('chat_sessions')
+    .update({
+      feedback: feedbackValue
+    })
+    .eq('id', sessionId)
+    .select();
+
+  if (error) throw error;
+  return { action: 'feedback_saved', data: updated };
+}
+
 // CORS headers for cross-origin requests
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -357,10 +376,20 @@ export default async function handler(req, res) {
         result = await handleEndSession(supabase, requestData);
         break;
 
+      case 'feedback':
+        if (!requestData.feedbackValue) {
+          return res.status(400).json({ 
+            error: 'Bad request',
+            message: 'feedbackValue is required for feedback action' 
+          });
+        }
+        result = await handleFeedback(supabase, requestData);
+        break;
+
       default:
         return res.status(400).json({ 
           error: 'Bad request',
-          message: `Unknown action: ${action}. Valid actions: message, recommendation, click, end_session` 
+          message: `Unknown action: ${action}. Valid actions: message, recommendation, click, end_session, feedback` 
         });
     }
 

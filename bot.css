@@ -1112,3 +1112,118 @@ button:active {
     height: 28px !important;
   }
 }
+
+/* ============================================
+   FEEDBACK WIDGET STYLING
+   ============================================ */
+.feedback-widget {
+  background: linear-gradient(135deg, rgba(209, 182, 179, 0.15) 0%, rgba(244, 236, 230, 0.15) 100%);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(209, 182, 179, 0.2);
+  padding: 0;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.feedback-widget.show {
+  max-height: 60px;
+  opacity: 1;
+  padding: 10px 16px;
+}
+
+.feedback-widget.hiding {
+  max-height: 0;
+  opacity: 0;
+  padding: 0;
+}
+
+.feedback-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.feedback-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  flex: 1;
+}
+
+.feedback-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.feedback-btn {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(209, 182, 179, 0.3);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+.feedback-btn:hover {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+  transform: scale(1.05);
+}
+
+.feedback-btn:active {
+  transform: scale(0.95);
+}
+
+.feedback-btn i {
+  pointer-events: none;
+}
+
+.feedback-thanks {
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.feedback-thanks .feedback-text {
+  text-align: center;
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .feedback-widget.show {
+    max-height: 55px;
+    padding: 8px 12px;
+  }
+  
+  .feedback-text {
+    font-size: 12px;
+  }
+  
+  .feedback-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+}
