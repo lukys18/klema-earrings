@@ -36,6 +36,25 @@
   border-bottom-color: var(--primary-hover);
 }
 
+/* GDPR link styling */
+.message.bot a.gdpr-link {
+  font-size: 9px;
+  position: absolute;
+  bottom: 4px;
+  right: 8px;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  font-weight: 400;
+  border-bottom: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.message.bot a.gdpr-link:hover {
+  opacity: 1;
+  color: var(--primary-color);
+}
+
 /* Základné nastavenie pre iframe kompatibilitu */
 html {
   height: 100%;
